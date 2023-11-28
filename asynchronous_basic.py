@@ -1,7 +1,16 @@
-# import asyncio
-# from aiogram import Bot, Dispatcher, executor, types
-# from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
-# from config import TOKEN_API
+import asyncio
+from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from config import TOKEN_API
+from aiogram.utils.callback_data import CallbackData
+from aiogram.utils.exceptions import BotBlocked
+
+bot = Bot(TOKEN_API)
+dp = Dispatcher(bot)
+
+async def startup(_):
+    print('Бот был успешно запущен')
+
 # #19 урок асинхронное программирование и библиотека asyncio
 
 # # async def send_hello() -> None:
@@ -197,31 +206,70 @@
 #     executor.start_polling(dispatcher=dp, skip_updates=True, on_startup=startup)
 
 # 26 урок Шаблон CallbackData() и callback_data
-from aiogram import types, executor, Dispatcher, Bot
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import TOKEN_API
-from aiogram.utils.callback_data import CallbackData
+# from aiogram import types, executor, Dispatcher, Bot
+# from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+# from config import TOKEN_API
+# from aiogram.utils.callback_data import CallbackData
 
-bot = Bot(TOKEN_API)
-dp = Dispatcher(bot)
+# bot = Bot(TOKEN_API)
+# dp = Dispatcher(bot)
 
-async def startup(_):
-    print('Бот был успешно запущен')
+# async def startup(_):
+#     print('Бот был успешно запущен')
 
-cb = CallbackData('ikb','action') #шаблон ikb - префикс (название для определённой работы, к примеру с числами или текстом) action - что нужно сделать (выполнить)
+# cb = CallbackData('ikb','action') #шаблон ikb - префикс (название для определённой работы, к примеру с числами или текстом) action - что нужно сделать (выполнить)
 
-ikb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton('Button', callback_data=cb.new('push'))],
-])
+# ikb = InlineKeyboardMarkup(inline_keyboard=[
+#     [InlineKeyboardButton('Button', callback_data=cb.new('push'))],
+# ])
+
+# @dp.message_handler(commands=['start'])
+# async def cmd_start(message: types.Message) -> None:
+#     await message.answer('text',reply_markup=ikb)
+    
+
+# @dp.callback_query_handler(cb.filter()) #можно задать фильр для cb, к примеру cb.filter(action=push) фильтр на кнопку pushs
+# async def ikb_callback_handler(callback: types.CallbackQuery, callback_data: dict) -> None:
+#     if callback_data['action'] == 'push':
+#         await callback.answer('smth')
+    
+
+
+#27 урок Errors Handler (Ислючения Хэндлеров)
+
+# @dp.message_handler(commands=['start'])
+# async def cmd_start(message: types.Message) -> None:
+#     await asyncio.sleep(10)
+#     await message.answer('ddddd')
+
+# @dp.errors_handler(exception=BotBlocked)
+# async def error_bot_blocked(update: types.Update, exception: BotBlocked) -> bool:
+#     print('Низя отправить сообщение, потому что нас заблокировали')
+#     return True
+
+#28-30 урок Inline режим; inline_query
+
+#31 урок создаём Inline Echo бота
+cb = CallbackData('ikb', 'action')
+
+def inline_keyboard() -> InlineKeyboardMarkup:
+    ikb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='Button 1', callback_data=cb.new('push1')),InlineKeyboardButton(text='Button 2', callback_data=cb.new('push2'))],
+    ])
+    return ikb
 
 @dp.message_handler(commands=['start'])
-async def cmd_start(message: types.Message) -> None:
-    await message.answer('text',reply_markup=ikb)
-    
-@dp.callback_query_handler(cb.filter())
-async def ikb_callback_handler(callback: types.CallbackQuery, callback_data: dict) -> None:
-    if callback_data['action'] == 'push':
-        await callback.answer('smth')
-    
+async def startbot(message: types.Message) -> None:
+    await bot.send_message(chat_id=message.chat.id, text='Салам братанам!', reply_markup=inline_keyboard())
+    #await message.delete()
+
+@dp.callback_query_handler(cb.filter(action='push1'))
+async def push_first(callback: types.CallbackQuery) -> None:
+    await callback.answer('Hello')
+
+@dp.callback_query_handler(cb.filter(action='push2'))
+async def push_second(callback: types.CallbackQuery) -> None:
+    await callback.answer('World!')
+
 if __name__ == '__main__':
     executor.start_polling(dispatcher=dp, skip_updates=True, on_startup=startup)
