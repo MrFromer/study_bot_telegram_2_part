@@ -4,6 +4,8 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from config import TOKEN_API
 from aiogram.utils.callback_data import CallbackData
 from aiogram.utils.exceptions import BotBlocked
+from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
+import hashlib
 
 bot = Bot(TOKEN_API)
 dp = Dispatcher(bot)
@@ -250,26 +252,52 @@ async def startup(_):
 #28-30 урок Inline режим; inline_query
 
 #31 урок создаём Inline Echo бота
-cb = CallbackData('ikb', 'action')
 
-def inline_keyboard() -> InlineKeyboardMarkup:
-    ikb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='Button 1', callback_data=cb.new('push1')),InlineKeyboardButton(text='Button 2', callback_data=cb.new('push2'))],
-    ])
-    return ikb
+#ТУТ МЫ ДЕЛАЕМ БОТА С ФИЛЬРОМ НА ДЕЙСТВИЕ INLINE КНОПКИ
+# cb = CallbackData('ikb', 'action')
+# def inline_keyboard() -> InlineKeyboardMarkup:
+#     ikb = InlineKeyboardMarkup(inline_keyboard=[
+#         [InlineKeyboardButton(text='Button 1', callback_data=cb.new('push1')),InlineKeyboardButton(text='Button 2', callback_data=cb.new('push2'))],
+#     ])
+#     return ikb
 
-@dp.message_handler(commands=['start'])
-async def startbot(message: types.Message) -> None:
-    await bot.send_message(chat_id=message.chat.id, text='Салам братанам!', reply_markup=inline_keyboard())
-    #await message.delete()
+# @dp.message_handler(commands=['start'])
+# async def startbot(message: types.Message) -> None:
+#     await bot.send_message(chat_id=message.chat.id, text='Салам братанам!', reply_markup=inline_keyboard())
+#     #await message.delete()
 
-@dp.callback_query_handler(cb.filter(action='push1'))
-async def push_first(callback: types.CallbackQuery) -> None:
-    await callback.answer('Hello')
+# @dp.callback_query_handler(cb.filter(action='push1'))
+# async def push_first(callback: types.CallbackQuery) -> None:
+#     await callback.answer('Hello')
 
-@dp.callback_query_handler(cb.filter(action='push2'))
-async def push_second(callback: types.CallbackQuery) -> None:
-    await callback.answer('World!')
+# @dp.callback_query_handler(cb.filter(action='push2'))
+# async def push_second(callback: types.CallbackQuery) -> None:
+#     await callback.answer('World!')
+
+#СОЗДАЁМ ECHO BOTA ЧЕРЕЗ INLINE РЕЖИМ
+# @dp.inline_handler() #процесс InlineQuery() формируется при помощи Telegram API
+# async def inline_echo(inline_query: types.InlineQuery) -> None:
+#     text = inline_query.query or 'Echo' #получили текст от пользователя
+#     input_content = InputTextMessageContent(text) #формируем контент ответного сообщения
+#     result_id = hashlib.md5(text.encode()).hexdigest() #берём сообщение --> переводим в двоичную сист. счисления --> кодируем --> переводим в 16-ти ричную (т.е мы просто из текст сделали уникальный id)
+#     item = InlineQueryResultArticle(input_message_content=input_content, id=result_id, title='Echo') #формируем итоговый объект для ответа пользователю (ниже он стоит в result т.е то, что принимается в качестве ответа)
+#     await bot.answer_inline_query(inline_query_id=inline_query.id, results=[item], cache_time=1)
+
+#32 урок Inline Бот - Практическое видео
+# @dp.inline_handler()
+# async def inline_answer(inline_query: types.InlineQuery) -> None:
+#     text = inline_query.query or 'Echo' #создаём сам запрос
+#     input_content = InputTextMessageContent(text) #принимаем на вход текст от пользователя
+#     result_id = hashlib.md5(text.encode()).hexdigest()
+    
+#     if text =='photo':
+#         input_content = InputTextMessageContent('This is a photo') #принимаем на вход текст от пользователя
+        
+#     item = InlineQueryResultArticle(input_message_content=input_content, id=result_id, title=text)
+
+#     await bot.answer_inline_query(inline_query_id=inline_query.id, results=[item],cache_time=1)
+
+
 
 if __name__ == '__main__':
     executor.start_polling(dispatcher=dp, skip_updates=True, on_startup=startup)
