@@ -1,14 +1,18 @@
 import asyncio
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.dispatcher.filters.state import StatesGroup
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from config import TOKEN_API
 from aiogram.utils.callback_data import CallbackData
 from aiogram.utils.exceptions import BotBlocked
 from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
 import hashlib
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
+storage = MemoryStorage()
 bot = Bot(TOKEN_API)
-dp = Dispatcher(bot)
+dp = Dispatcher(bot, storage)
 
 async def startup(_):
     print('Бот был успешно запущен')
@@ -297,7 +301,24 @@ async def startup(_):
 
 #     await bot.answer_inline_query(inline_query_id=inline_query.id, results=[item],cache_time=1)
 
+#36 и 37 урок FSM - машина состояний автомат
+def btn() -> ReplyKeyboardMarkup:
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(KeyboardButton('/create'))
+    return kb
+class Profile(StatesGroup):
+    photo = State()
+    name = State()
+    age = State()
+    desc = State()
+@dp.message_handler(commands=['start'])
+async def cmd_start(message: types.Message) -> None:
+    await message.answer('Welcome and write /create',reply_markup=btn())
 
+@dp.message_handler(commands=['create'])
+async def cmd_create(message: types.Message) -> None:
+    await message.answer('Create your profile! And send me your photo')
+    await Profile.photo.set()
 
 if __name__ == '__main__':
     executor.start_polling(dispatcher=dp, skip_updates=True, on_startup=startup)
