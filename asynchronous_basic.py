@@ -1,34 +1,19 @@
 import asyncio
 from aiogram import Bot, Dispatcher, executor, types
-<<<<<<< HEAD
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardMarkup, KeyboardButton
-=======
-from aiogram.dispatcher.filters.state import StatesGroup
+from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
->>>>>>> dcf7d57a65e5aa42170acfeb246fe02cc0909743
 from config import TOKEN_API
 from aiogram.utils.callback_data import CallbackData
 from aiogram.utils.exceptions import BotBlocked
 from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
 import hashlib
-<<<<<<< HEAD
-import uuid
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.dispatcher.filters import Text
-from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.dispatcher import FSMContext
-
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 storage = MemoryStorage()
 bot = Bot(TOKEN_API)
 dp = Dispatcher(bot, storage=storage)
-=======
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
-storage = MemoryStorage()
-bot = Bot(TOKEN_API)
-dp = Dispatcher(bot, storage)
->>>>>>> dcf7d57a65e5aa42170acfeb246fe02cc0909743
 
 async def startup(_):
     print('Бот был успешно запущен')
@@ -317,7 +302,7 @@ async def startup(_):
 
 #     await bot.answer_inline_query(inline_query_id=inline_query.id, results=[item],cache_time=1)
 
-<<<<<<< HEAD
+
 #34 урок Urls Inline Бот | Title, Description - непонятная шняга
 # class A:
 #     x = 5
@@ -344,98 +329,146 @@ async def startup(_):
 
 
 
-storage = MemoryStorage()
-bot = Bot(TOKEN_API)
-dp = Dispatcher(bot=bot,
-                storage=storage)
+# storage = MemoryStorage()
+# bot = Bot(TOKEN_API)
+# dp = Dispatcher(bot=bot,
+#                 storage=storage)
 
-def get_keyboard() -> ReplyKeyboardMarkup:
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(KeyboardButton('Начать работу!'))
+# def get_keyboard() -> ReplyKeyboardMarkup:
+#     kb = ReplyKeyboardMarkup(resize_keyboard=True)
+#     kb.add(KeyboardButton('Начать работу!'))
 
-    return kb
+#     return kb
 
-def get_cancel() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton('/cancel'))
-
-
-class ClientStatesGroup(StatesGroup):
-    photo = State()
-    desc = State()
+# def get_cancel() -> ReplyKeyboardMarkup:
+#     return ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton('/cancel'))
 
 
-@dp.message_handler(commands=['start'])
-async def cmd_start(message: types.Message) -> None:
-    await message.answer('Добро пожаловать', reply_markup=get_keyboard())
+# class ClientStatesGroup(StatesGroup):
+#     photo = State()
+#     desc = State()
 
 
-@dp.message_handler(commands=['cancel'], state='*')
-async def cmd_start(message: types.Message, state: FSMContext) -> None:
-    current_state = await state.get_state()
-    if current_state is None:
-        return
-
-    await message.reply('Отменил', reply_markup=get_keyboard())
-    await state.finish()
+# @dp.message_handler(commands=['start'])
+# async def cmd_start(message: types.Message) -> None:
+#     await message.answer('Добро пожаловать', reply_markup=get_keyboard())
 
 
-@dp.message_handler(Text(equals='Начать работу!', ignore_case=True), state=None)
-async def start_work(message: types.Message) -> None:
-    await ClientStatesGroup.photo.set()
-    await message.answer('Сначала отправь нам фотографию!', reply_markup=get_cancel())
+# @dp.message_handler(commands=['cancel'], state='*')
+# async def cmd_start(message: types.Message, state: FSMContext) -> None:
+#     current_state = await state.get_state()
+#     if current_state is None:
+#         return
+
+#     await message.reply('Отменил', reply_markup=get_keyboard())
+#     await state.finish()
 
 
-@dp.message_handler(lambda message: not message.photo, state=ClientStatesGroup.photo)
-async def check_photo(message: types.Message):
-    return await message.reply('Это не фотография!')
+# @dp.message_handler(Text(equals='Начать работу!', ignore_case=True), state=None)
+# async def start_work(message: types.Message) -> None:
+#     await ClientStatesGroup.photo.set()
+#     await message.answer('Сначала отправь нам фотографию!', reply_markup=get_cancel())
 
 
-@dp.message_handler(lambda message: message.photo, content_types=['photo'], state=ClientStatesGroup.photo)
-async def load_photo(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data['photo'] = message.photo[0].file_id
-    await ClientStatesGroup.next()
-    await message.reply('А теперь отправь нам описание!')
+# @dp.message_handler(lambda message: not message.photo, state=ClientStatesGroup.photo)
+# async def check_photo(message: types.Message):
+#     return await message.reply('Это не фотография!')
 
 
-@dp.message_handler(state=ClientStatesGroup.desc)
-async def load_photo(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data['desc'] = message.text
-
-    await message.reply('Ваша фотография сохранена!')
-
-    async with state.proxy() as data:
-        await bot.send_photo(chat_id=message.from_user.id,
-                             photo=data['photo'],
-                             caption=data['desc'])
-
-    await state.finish()
+# @dp.message_handler(lambda message: message.photo, content_types=['photo'], state=ClientStatesGroup.photo)
+# async def load_photo(message: types.Message, state: FSMContext):
+#     async with state.proxy() as data:
+#         data['photo'] = message.photo[0].file_id
+#     await ClientStatesGroup.next()
+#     await message.reply('А теперь отправь нам описание!')
 
 
-if __name__ == '__main__':
-    executor.start_polling(dp,
-                           skip_updates=True)
-=======
+# @dp.message_handler(state=ClientStatesGroup.desc)
+# async def load_photo(message: types.Message, state: FSMContext):
+#     async with state.proxy() as data:
+#         data['desc'] = message.text
+
+#     await message.reply('Ваша фотография сохранена!')
+
+#     async with state.proxy() as data:
+#         await bot.send_photo(chat_id=message.from_user.id,
+#                              photo=data['photo'],
+#                              caption=data['desc'])
+
+#     await state.finish()
+
+
+# if __name__ == '__main__':
+#     executor.start_polling(dp,
+#                            skip_updates=True)
+
 #36 и 37 урок FSM - машина состояний автомат
+#38 урок FSM - машина состояния с приложением 2
 def btn() -> ReplyKeyboardMarkup:
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add(KeyboardButton('/create'))
     return kb
+
+def get_cancel_kb() -> ReplyKeyboardMarkup:
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(KeyboardButton('/cancel'))
+    return kb
+
 class Profile(StatesGroup):
     photo = State()
     name = State()
     age = State()
     desc = State()
+
+@dp.message_handler(commands=['cancel'], state='*')
+async def cmd_cancel(message: types.Message, state: FSMContext):
+    if state is None:
+        return
+
+    await state.finish()
+    await message.reply('Вы прервали создание анкеты!', reply_markup=btn())
+    
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message) -> None:
     await message.answer('Welcome and write /create',reply_markup=btn())
->>>>>>> dcf7d57a65e5aa42170acfeb246fe02cc0909743
 
 @dp.message_handler(commands=['create'])
-async def cmd_create(message: types.Message) -> None:
-    await message.answer('Create your profile! And send me your photo')
-    await Profile.photo.set()
+async def cmd_start(message: types.Message) -> None:
+    await message.reply('Для начала пришли своё фото!',reply_markup=get_cancel_kb())
+    await Profile.photo.set() #ставим состояние на 'photo'
+
+@dp.message_handler(content_types=['photo'], state = Profile.photo)
+async def load_photo(message: types.Message, state: FSMContext) -> None:
+    async with state.proxy() as data: #data - временное хранилище для состояний
+        data['photo'] = message.photo[0].file_id #во временное хранилище под индификатором photo сохраняем id фотографии, которую отправил пользователь
+
+    await message.reply('Теперь отправь своё имя')
+    await Profile.next() #изменяем состояние на следующее (на name) см. выше class Profile, там описаны все состояния FSM
+
+@dp.message_handler( state = Profile.name)
+async def load_name(message: types.Message, state: FSMContext) -> None:
+    async with state.proxy() as data: #data - временное хранилище для состояний
+        data['name'] = message.text #в временное хранилище под индификатором photo сохраняем id фотографии, которую отправил пользователь
+
+    await message.reply('Сколько тебе лет?')
+    await Profile.next() #изменяем состояние на следующее (age)
+
+@dp.message_handler( state = Profile.age)
+async def load_age(message: types.Message, state: FSMContext) -> None:
+    async with state.proxy() as data: #data - временное хранилище для состояний
+        data['age'] = message.text #в временное хранилище под индификатором photo сохраняем id фотографии, которую отправил пользователь
+
+    await message.reply('Напиши немного о себе')
+    await Profile.next() #изменяем состояние на следующее (desc)
+
+@dp.message_handler( state = Profile.desc)
+async def load_desc(message: types.Message, state: FSMContext) -> None:
+    async with state.proxy() as data: #data - временное хранилище для состояний
+        data['desc'] = message.text #в временное хранилище под индификатором photo сохраняем id фотографии, которую отправил пользователь
+        
+    await message.reply('Супер! Мы всё сохранили')
+    await bot.send_photo(chat_id=message.from_user.id, photo = data['photo'], caption=f"{data['name']}, {data['age']}\n{data['desc']}")
+    await state.finish() #завершаем состояние
 
 if __name__ == '__main__':
     executor.start_polling(dispatcher=dp, skip_updates=True, on_startup=startup)
