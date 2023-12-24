@@ -1,11 +1,17 @@
 import asyncio
 from aiogram import Bot, Dispatcher, executor, types
+<<<<<<< HEAD
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardMarkup, KeyboardButton
+=======
+from aiogram.dispatcher.filters.state import StatesGroup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+>>>>>>> dcf7d57a65e5aa42170acfeb246fe02cc0909743
 from config import TOKEN_API
 from aiogram.utils.callback_data import CallbackData
 from aiogram.utils.exceptions import BotBlocked
 from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
 import hashlib
+<<<<<<< HEAD
 import uuid
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters import Text
@@ -15,6 +21,14 @@ from aiogram.dispatcher import FSMContext
 storage = MemoryStorage()
 bot = Bot(TOKEN_API)
 dp = Dispatcher(bot, storage=storage)
+=======
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+
+storage = MemoryStorage()
+bot = Bot(TOKEN_API)
+dp = Dispatcher(bot, storage)
+>>>>>>> dcf7d57a65e5aa42170acfeb246fe02cc0909743
 
 async def startup(_):
     print('Бот был успешно запущен')
@@ -303,6 +317,7 @@ async def startup(_):
 
 #     await bot.answer_inline_query(inline_query_id=inline_query.id, results=[item],cache_time=1)
 
+<<<<<<< HEAD
 #34 урок Urls Inline Бот | Title, Description - непонятная шняга
 # class A:
 #     x = 5
@@ -401,7 +416,26 @@ async def load_photo(message: types.Message, state: FSMContext):
 if __name__ == '__main__':
     executor.start_polling(dp,
                            skip_updates=True)
+=======
+#36 и 37 урок FSM - машина состояний автомат
+def btn() -> ReplyKeyboardMarkup:
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(KeyboardButton('/create'))
+    return kb
+class Profile(StatesGroup):
+    photo = State()
+    name = State()
+    age = State()
+    desc = State()
+@dp.message_handler(commands=['start'])
+async def cmd_start(message: types.Message) -> None:
+    await message.answer('Welcome and write /create',reply_markup=btn())
+>>>>>>> dcf7d57a65e5aa42170acfeb246fe02cc0909743
 
+@dp.message_handler(commands=['create'])
+async def cmd_create(message: types.Message) -> None:
+    await message.answer('Create your profile! And send me your photo')
+    await Profile.photo.set()
 
 if __name__ == '__main__':
     executor.start_polling(dispatcher=dp, skip_updates=True, on_startup=startup)
