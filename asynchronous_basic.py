@@ -1,14 +1,20 @@
 import asyncio
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardMarkup, KeyboardButton
 from config import TOKEN_API
 from aiogram.utils.callback_data import CallbackData
 from aiogram.utils.exceptions import BotBlocked
 from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
 import hashlib
+import uuid
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher.filters import Text
+from aiogram.dispatcher.filters.state import StatesGroup, State
+from aiogram.dispatcher import FSMContext
 
+storage = MemoryStorage()
 bot = Bot(TOKEN_API)
-dp = Dispatcher(bot)
+dp = Dispatcher(bot, storage=storage)
 
 async def startup(_):
     print('Бот был успешно запущен')
@@ -283,7 +289,7 @@ async def startup(_):
 #     item = InlineQueryResultArticle(input_message_content=input_content, id=result_id, title='Echo') #формируем итоговый объект для ответа пользователю (ниже он стоит в result т.е то, что принимается в качестве ответа)
 #     await bot.answer_inline_query(inline_query_id=inline_query.id, results=[item], cache_time=1)
 
-#32 урок Inline Бот - Практическое видео
+#32 урок Inline Бот - Практическое видео на тему inline_query
 # @dp.inline_handler()
 # async def inline_answer(inline_query: types.InlineQuery) -> None:
 #     text = inline_query.query or 'Echo' #создаём сам запрос
@@ -297,6 +303,104 @@ async def startup(_):
 
 #     await bot.answer_inline_query(inline_query_id=inline_query.id, results=[item],cache_time=1)
 
+#34 урок Urls Inline Бот | Title, Description - непонятная шняга
+# class A:
+#     x = 5
+#     y = 2
+#     def add(self, a: int, b: int) -> int:
+#         return a + b
+# a = A()
+# print(a.add(5,3))
+# A.add = classmethod(A.add)
+
+#35 урок Практика по созданию echo бота через inline_query с функционалом выбора написать жирным шрифтом, курсивом или когда ничего не выбрал - Empty
+# @dp.inline_handler()
+# async def inline_answer(inline_query: types.InlineQuery) -> None:
+#     text = inline_query.query or 'Empty'
+#     input_bold = types.InputTextMessageContent(message_text=f'*{text}*', parse_mode='markdown') #чтобы текст, который введёт пользователь делался жирным
+#     input_italic = types.InputTextMessageContent(message_text=f'_{text}_', parse_mode='markdown') #чтобы текст, который введёт пользователь делался курсивом
+#     item_1 = types.InlineQueryResultArticle(id=str(uuid.uuid4()), input_message_content=input_bold, title='Bold', description=text, thumb_url='https://s.rbk.ru/v1_companies_s3/resized/1200xH/media/trademarks/3a072b7c-97fd-4cf4-be99-1cc9ba090933.jpg') 
+#     #т.е тут через types мы создаём более расширенную версию InlineQuery в id через uuid индифицируем айдишник сообщения; далее в input_message вносим текст с параметром Bold; в description текст, который ввёл пользователь; в thump_url = картинку, которая будет отображаться в боте
+#     item_2 = types.InlineQueryResultArticle(id=str(uuid.uuid4()), input_message_content=input_italic,  title='Italic', description=text, thumb_url='https://sgmsummers.files.wordpress.com/2014/10/italic.jpg')
+#     await bot.answer_inline_query(inline_query_id=inline_query.id, results=[item_1,item_2],cache_time=1) #в results передаёт два параметра
+
+#урок FSM машина состояний для телеграмм бота на Python
+#storage = MemoryStorage() - объявил это в самом начале. Это временная память, для не особо важных элементов и работает это через машину состояний
+
+
+
+storage = MemoryStorage()
+bot = Bot(TOKEN_API)
+dp = Dispatcher(bot=bot,
+                storage=storage)
+
+def get_keyboard() -> ReplyKeyboardMarkup:
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(KeyboardButton('Начать работу!'))
+
+    return kb
+
+def get_cancel() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton('/cancel'))
+
+
+class ClientStatesGroup(StatesGroup):
+    photo = State()
+    desc = State()
+
+
+@dp.message_handler(commands=['start'])
+async def cmd_start(message: types.Message) -> None:
+    await message.answer('Добро пожаловать', reply_markup=get_keyboard())
+
+
+@dp.message_handler(commands=['cancel'], state='*')
+async def cmd_start(message: types.Message, state: FSMContext) -> None:
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+
+    await message.reply('Отменил', reply_markup=get_keyboard())
+    await state.finish()
+
+
+@dp.message_handler(Text(equals='Начать работу!', ignore_case=True), state=None)
+async def start_work(message: types.Message) -> None:
+    await ClientStatesGroup.photo.set()
+    await message.answer('Сначала отправь нам фотографию!', reply_markup=get_cancel())
+
+
+@dp.message_handler(lambda message: not message.photo, state=ClientStatesGroup.photo)
+async def check_photo(message: types.Message):
+    return await message.reply('Это не фотография!')
+
+
+@dp.message_handler(lambda message: message.photo, content_types=['photo'], state=ClientStatesGroup.photo)
+async def load_photo(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['photo'] = message.photo[0].file_id
+    await ClientStatesGroup.next()
+    await message.reply('А теперь отправь нам описание!')
+
+
+@dp.message_handler(state=ClientStatesGroup.desc)
+async def load_photo(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['desc'] = message.text
+
+    await message.reply('Ваша фотография сохранена!')
+
+    async with state.proxy() as data:
+        await bot.send_photo(chat_id=message.from_user.id,
+                             photo=data['photo'],
+                             caption=data['desc'])
+
+    await state.finish()
+
+
+if __name__ == '__main__':
+    executor.start_polling(dp,
+                           skip_updates=True)
 
 
 if __name__ == '__main__':
