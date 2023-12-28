@@ -10,12 +10,15 @@ import hashlib
 from aiogram.dispatcher import FSMContext
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from sqlite import db_start, create_profile, edit_profile
+
 storage = MemoryStorage()
 bot = Bot(TOKEN_API)
 dp = Dispatcher(bot, storage=storage)
 
 
 async def startup(_):
+    await db_start() #подключение к базе данных
     print('Бот был успешно запущен')
 
 # #19 урок асинхронное программирование и библиотека asyncio
@@ -404,6 +407,7 @@ async def startup(_):
 
 #36 и 37 урок FSM - машина состояний автомат
 #38 урок FSM - машина состояния с приложением 2
+#39 урок FSM - проверка на правильной введённых данных
 def btn() -> ReplyKeyboardMarkup:
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add(KeyboardButton('/create'))
@@ -420,7 +424,7 @@ class Profile(StatesGroup):
     age = State()
     desc = State()
 
-@dp.message_handler(commands=['cancel'], state='*')
+@dp.message_handler(commands=['cancel'], state='*') #state = '*' - означает любое состояние, т.е команда будет работать в любом состоянии
 async def cmd_cancel(message: types.Message, state: FSMContext):
     if state is None:
         return
@@ -431,11 +435,16 @@ async def cmd_cancel(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message) -> None:
     await message.answer('Welcome and write /create',reply_markup=btn())
+    await create_profile(user_id=message.from_user.id) #вызываем функцию для создания профиля в базе данных (см. файл sqlite)
 
 @dp.message_handler(commands=['create'])
 async def cmd_start(message: types.Message) -> None:
     await message.reply('Для начала пришли своё фото!',reply_markup=get_cancel_kb())
     await Profile.photo.set() #ставим состояние на 'photo'
+
+@dp.message_handler(lambda message: not message.photo, state=Profile.photo) #проверка на то, что пользователь отправил не "фото", важно поставить это перед основной функцией в самом начале !!!Бот находится в состоянии (state) ожидания фото
+async def check_photo(message: types.Message):
+    await message.reply('Это не фотография!') #ответ, если пользователь прислал не фото
 
 @dp.message_handler(content_types=['photo'], state = Profile.photo)
 async def load_photo(message: types.Message, state: FSMContext) -> None:
@@ -445,13 +454,21 @@ async def load_photo(message: types.Message, state: FSMContext) -> None:
     await message.reply('Теперь отправь своё имя')
     await Profile.next() #изменяем состояние на следующее (на name) см. выше class Profile, там описаны все состояния FSM
 
-@dp.message_handler( state = Profile.name)
+@dp.message_handler(lambda message: not message.text.isalpha(), state=Profile.name)  #isalpha() - проверка на то, что в "text" пользователь ввёл данные в формате текста (т.е не символы и цифры)
+async def check_name(message: types.Message):
+    await message.reply('Это не текст!') #ответ, если пользователь прислал не текст
+
+@dp.message_handler(state = Profile.name) #бот находится в состоянии ожидании имени
 async def load_name(message: types.Message, state: FSMContext) -> None:
     async with state.proxy() as data: #data - временное хранилище для состояний
         data['name'] = message.text #в временное хранилище под индификатором photo сохраняем id фотографии, которую отправил пользователь
 
     await message.reply('Сколько тебе лет?')
     await Profile.next() #изменяем состояние на следующее (age)
+
+@dp.message_handler(lambda message: not message.text.isdigit(), state=Profile.age) #isdigit - проверка что текст является числом
+async def check_age(message: types.Message):
+    await message.reply('Это не число!') #ответ, если пользователь прислал не число
 
 @dp.message_handler( state = Profile.age)
 async def load_age(message: types.Message, state: FSMContext) -> None:
@@ -466,9 +483,12 @@ async def load_desc(message: types.Message, state: FSMContext) -> None:
     async with state.proxy() as data: #data - временное хранилище для состояний
         data['desc'] = message.text #в временное хранилище под индификатором photo сохраняем id фотографии, которую отправил пользователь
         
+    await edit_profile(state, user_id=message.from_user.id) #сохраняем данные в базе данных (вызываем соответствующую функцию из файла sqlite)
     await message.reply('Супер! Мы всё сохранили')
     await bot.send_photo(chat_id=message.from_user.id, photo = data['photo'], caption=f"{data['name']}, {data['age']}\n{data['desc']}")
     await state.finish() #завершаем состояние
+    
+#40 урок подключение бота к базе данных (см. файл sqlite.py)
 
 if __name__ == '__main__':
     executor.start_polling(dispatcher=dp, skip_updates=True, on_startup=startup)
