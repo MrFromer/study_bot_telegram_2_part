@@ -12,6 +12,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from sqlite import db_start, create_profile, edit_profile
 from aiogram.dispatcher.middlewares import BaseMiddleware
+from aiogram.dispatcher.handler import CancelHandler, current_handler
 
 storage = MemoryStorage()
 bot = Bot(TOKEN_API)
@@ -493,19 +494,43 @@ async def startup(_):
 
 
 #44 урок Что такое Middleware? 
-# class TestMiddleware(BaseMiddleware):
-#     async def on_process_update(self, update, data): #важно указывать названия ф-ций, соответствующие синтаксису т.е прописывать название, того что конкретно мы хотим получить
-#         print('dada') #в данном случае эта ф-ция выполнится второй т.к в ней просто написано process_update, а в нижней есть "pre"
+class TestMiddleware(BaseMiddleware):
+    async def on_process_update(self, update, data): #важно указывать названия ф-ций, соответствующие синтаксису т.е прописывать название, того что конкретно мы хотим получить
+        print('dada') #в данном случае эта ф-ция выполнится второй т.к в ней просто написано process_update, а в нижней есть "pre"
 
-#     async def on_pre_process_update(self, update: types.Update, data: dict): #сначала выполнится эта ф-ция т.к в названии указано "pre"
-#         print('Hello')
+    async def on_pre_process_update(self, update: types.Update, data: dict): #сначала выполнится эта ф-ция т.к в названии указано "pre"
+        print('Hello')
         
-# @dp.message_handler(commands=['start']) #обычный хэндлер команды
-# async def cmd_start(message: types.Message) -> None:
-#     await message.reply('fsdfsfs')
-#     print('Hello world')
+@dp.message_handler(commands=['start']) #обычный хэндлер команды
+async def cmd_start(message: types.Message) -> None:
+    await message.reply('fsdfsfs')
+    print('Hello world')
 
-#45 продолжение практики по Middleware
+#46 урок - Middleware; декоратор хэндлера
+def set_key(key: str = None): #внешняя ф-ци, где мы в неё передаём пустое значение "key"
+    def decorator(func): #эта функция замыкание (см. в гугле), она подключает к ф-ции "func" дополнительное поведение ==> мы можем названи её декоратором. К примеру "func" будет явл. хэндлером
+        setattr(func, 'key', key) #устанавливаем атрибут "key" для ф-ции "func"
+        return func
+    return decorator 
+
+# #48 урок
+#from aiogram.dispatcher.handler import CancelHandler, current_handler
+class AdminMiddleware(BaseMiddleware):
+    async def on_process_message(self, message: types.Message, data: dict): #Middleware на этапе проверки отправки сообщений от пользователя
+        handler = current_handler.get() #получаем текущий хэндлер (в данном случае хэндлер будет связан с message)
+        if handler: #есть hadler существует, то получаем "key", который мы создавали выше в ф-ции "decorator"
+            key = getattr(handler, 'key', 'Такого атрибута нет') #если такого атрибута нет, то выведем соответствующее сообщение
+            print(key)
+
+#47 урок - создание ограничения на отправку сообщения. Т.е бот будет отправлять сообщение только определённому пользователю
+from aiogram.dispatcher.handler import CancelHandler
+ADMIN = 706242808 #мой индификатор 
+class CustomMiddleware(BaseMiddleware): 
+    async def on_process_message(self, message: types.Message, data: dict): #middleware на этапе проверки сообщения
+        if message.from_user.id != ADMIN: #если id пользователя, который отправил сообщение не равен ADMIN, то вызовется ошибка и бот ничего не отправит в ответ
+            raise CancelHandler() 
+
+#45 урок - продолжение практики по Middleware
 class CustomMiddleware(BaseMiddleware):
     async def on_pre_process_update(self, update: types.Update, data: dict):
         print('Pre process update')
@@ -516,14 +541,33 @@ class CustomMiddleware(BaseMiddleware):
     async def on_process_message(self, message: types.Message, data: dict): #эта ф-ци срабатывает только на отправку сообщения, в данном случае при нажатии на inline кнопку она ничего не выведет
         print(data, message)
 
-@dp.message_handler(commands=['start']) #обычный хэндлер команды
+@dp.message_handler(commands=['start']) #обычный хэндлер команды с вызовом клавиатуры (клавиатура создана ниже)
+@set_key('start') #подключаем динамический атрибут
 async def cmd_start(message: types.Message) -> None:
     ikb = types.InlineKeyboardMarkup(inline_keyboard=[
         [types.InlineKeyboardButton('Test', callback_data='okey')],
     ])
     await message.reply('Привет!', reply_markup=ikb)
-    print('Hello world')
+    #print('Hello world')
+
+#49 урок Функционал, который позволяет проверять какой пользователь сейчас нажимает на клавишу, и если эту кнопку вызвал (создал) не он, то бот ничего не делает и вызывается ошибка
+class CheckMiddleware(BaseMiddleware):
+    async def on_process_callback_query(self, callback: types.CallbackQuery, data: dict): #проверка вхождения запросов от inline клавиатуры
+        callback_id = callback.data[callback.data.find('_')+1:] #делаем срез из словаря от начала до конца check_ т.е сохраняем check_id (айди пользователя)
+        if callback_id != str(callback.from_user.id): #если айди пользователя который отправил callback запрос из клавиатуры не равен текущему, то бот ничего не делает и вызывается ошибка
+            raise CancelHandler()
+
+@dp.message_handler(commands=['start'])
+async def cmd_start(message: types.Message):
+    ikb = InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton('Тестовая кнопка', callback_data=f'check_{message.from_user.id}')], #в callback_data передаём айди пользователя
+    ])
+    await message.answer('Тестовое сообщение', reply_markup=ikb)
+
+@dp.callback_query_handler(lambda callback: callback.data.startswith('check_')) #фильтр через lambda на поиск запроса, который начинается с ckeck_ (который явл. айди пользователя)
+async def cb_check(callback: types.CallbackQuery):
+    await callback.message.answer('Ты нажал на кнопку')
 
 if __name__ == '__main__':
-    dp.middleware.setup(CustomMiddleware()) #устанавливаем middleware (в middleware можно прописывать действие, которые будут выполняться, до основной части кода. К примеру защита от спама)
+    dp.middleware.setup(CheckMiddleware()) #устанавливаем middleware - вводит название класса мидлвейр (в middleware можно прописывать действие, которые будут выполняться, до основной части кода. К примеру защита от спама)
     executor.start_polling(dispatcher=dp, skip_updates=True, on_startup=startup)
